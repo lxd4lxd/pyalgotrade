@@ -20,7 +20,7 @@
 
 import collections
 
-import broker
+from pyalgotrade import broker
 from pyalgotrade import warninghelpers
 
 import matplotlib.pyplot as plt
@@ -50,7 +50,7 @@ def _filter_datetimes(dateTimes, fromDate=None, toDate=None):
             return True
 
     dateTimeFilter = DateTimeFilter(fromDate, toDate)
-    return filter(lambda x: dateTimeFilter.includeDateTime(x), dateTimes)
+    return list(filter(lambda x: dateTimeFilter.includeDateTime(x), dateTimes))
 
 
 def _post_plot_fun(subPlot, mplSubplot):
@@ -257,7 +257,7 @@ class Subplot(object):
 
     def onBars(self, bars):
         dateTime = bars.getDateTime()
-        for cb, series in self.__callbacks.iteritems():
+        for cb, series in self.__callbacks.items():
             series.addValue(dateTime, cb(bars))
 
     def getSeries(self, name, defaultClass=LineMarker):
