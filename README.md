@@ -1,4 +1,8 @@
-PyAlgoTrade
+PyAlgoTrade for Python3
+===========
+对原版进行修改，让其支持Python3。
+
+
 ===========
 
 [![Build Status](https://travis-ci.org/gbeced/pyalgotrade.png?branch=master)](https://travis-ci.org/gbeced/pyalgotrade)
