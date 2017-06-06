@@ -150,7 +150,7 @@ class Server(xmlrpc.server.SimpleXMLRPCServer):
             loadedBars = []
             for dateTime, bars in self.__barFeed:
                 loadedBars.append(bars)
-            instruments = self.__barFeed.getRegisteredInstruments()
+            instruments = list(self.__barFeed.getRegisteredInstruments())
             self.__instrumentsAndBars = pickle.dumps((instruments, loadedBars))
             self.__barsFreq = self.__barFeed.getFrequency()
 
