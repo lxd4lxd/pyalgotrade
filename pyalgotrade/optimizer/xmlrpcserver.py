@@ -18,7 +18,7 @@
 .. moduleauthor:: Gabriel Martin Becedillas Ruiz <gabriel.becedillas@gmail.com>
 """
 
-import SimpleXMLRPCServer
+import xmlrpc.server
 import pickle
 import threading
 import time
@@ -58,15 +58,15 @@ class Job(object):
 
 
 # Restrict to a particular path.
-class RequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
+class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
     rpc_paths = ('/PyAlgoTradeRPC',)
 
 
-class Server(SimpleXMLRPCServer.SimpleXMLRPCServer):
+class Server(xmlrpc.server.SimpleXMLRPCServer):
     defaultBatchSize = 200
 
     def __init__(self, paramSource, resultSinc, barFeed, address, port, autoStop=True):
-        SimpleXMLRPCServer.SimpleXMLRPCServer.__init__(self, (address, port), requestHandler=RequestHandler, logRequests=False, allow_none=True)
+        xmlrpc.server.SimpleXMLRPCServer.__init__(self, (address, port), requestHandler=RequestHandler, logRequests=False, allow_none=True)
         # super(Server, self).__init__((address, port), requestHandler=RequestHandler, logRequests=False, allow_none=True)
 
         self.__paramSource = paramSource
@@ -100,7 +100,7 @@ class Server(SimpleXMLRPCServer.SimpleXMLRPCServer):
 
         # Get the next set of parameters.
         params = self.__paramSource.getNext(self.defaultBatchSize)
-        params = map(lambda p: p.args, params)
+        params = [p.args for p in params]
 
         # Map the active job
         if len(params):
@@ -122,9 +122,9 @@ class Server(SimpleXMLRPCServer.SimpleXMLRPCServer):
         return jobsPending or activeJobs
 
     def pushJobResults(self, jobId, result, parameters, workerName):
-        jobId = pickle.loads(jobId)
-        result = pickle.loads(result)
-        parameters = pickle.loads(parameters)
+        jobId = pickle.loads(jobId.data)
+        result = pickle.loads(result.data)
+        parameters = pickle.loads(parameters.data)
 
         # Remove the job mapping.
         with self.__activeJobsLock:
@@ -134,7 +134,7 @@ class Server(SimpleXMLRPCServer.SimpleXMLRPCServer):
                 # The job's results were already submitted.
                 return
 
-        if result is None or result > self.__bestResult:
+        if result is None or self.__bestResult is None or result > self.__bestResult:
             logger.info("Best result so far %s with parameters %s" % (result, parameters))
             self.__bestResult = result
 
@@ -150,7 +150,7 @@ class Server(SimpleXMLRPCServer.SimpleXMLRPCServer):
             loadedBars = []
             for dateTime, bars in self.__barFeed:
                 loadedBars.append(bars)
-            instruments = self.__barFeed.getRegisteredInstruments()
+            instruments = list(self.__barFeed.getRegisteredInstruments())
             self.__instrumentsAndBars = pickle.dumps((instruments, loadedBars))
             self.__barsFreq = self.__barFeed.getFrequency()
 
