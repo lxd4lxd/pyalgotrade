@@ -24,6 +24,8 @@ from pyalgotrade import broker
 from pyalgotrade import warninghelpers
 
 import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')
 from matplotlib import ticker
 
 
