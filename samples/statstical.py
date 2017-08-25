@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from datetime import datetime
 
 from pyalgotrade import bar
@@ -31,6 +32,8 @@ class ArimaGarch(strategy.BacktestingStrategy):
         # We'll use adjusted close values instead of regular close values.
         self.setUseAdjustedValues(False)
         self.__prices = feed[instrument].getPriceDataSeries()
+        self.__lowDS = feed[instrument]._BarDataSeries__lowDS
+        self.__highDS = feed[instrument]._BarDataSeries__highDS
         self.window = window
         self.arima_order = arima_order
         self.garch_order = garch_order
@@ -58,8 +61,26 @@ class ArimaGarch(strategy.BacktestingStrategy):
         # If the exit was canceled, re-submit it.
         position.exitMarket()
 
+    def on_long_trend(self):
+        high1, high2 = self.__highDS[-2:]
+        low1, low2 = self.__lowDS[-2:]
+        if high2 >= high1 and low2 >= low1:
+            return True
+        return False
+
+    def on_short_trend(self):
+        high1, high2 = self.__highDS[-2:]
+        low1, low2 = self.__lowDS[-2:]
+        if high2 <= high1 and low2 <= low1:
+            return True
+        return False
+
     def onBars(self, bars):
+
+        # self.info(self.__lowDS[-1])
+        # self.info(self.__highDS[-1])
         if len(self.__prices) > self.window:
+
             window_prices = np.array(self.__prices[(-1-self.window):-1])
             rt = np.diff(np.log(window_prices))
             predict = rob.r.fit_and_predict(rt,
@@ -67,19 +88,22 @@ class ArimaGarch(strategy.BacktestingStrategy):
                                            i=self.arima_order[1],
                                            q=self.arima_order[2])
             signal = predict[0]
-
+            self.info(signal)
+            self.info(self.getBroker().getEquity())
             if self.__longPos is not None:
                 if self.long_exeinfo:
                     self.info('long executed on %s' % self.__longPos._Position__entryDateTime)
                     self.long_exeinfo = False
-                if signal < 0 and self.__longPos.exitActive():
+                if not self.on_long_trend() and signal < 0 and \
+                        not self.__longPos.exitActive():
                     self.__longPos.exitMarket()
                     self.info('long exited on %s' % bars[self.__instrument].getDateTime())
             elif self.__shortPos is not None:
                 if self.short_exeinfo:
                     self.info('short executed on %s' % self.__shortPos._Position__entryDateTime)
                     self.short_exeinfo =False
-                if signal > 0 and self.__shortPos.exitActive():
+                if not self.on_short_trend() and signal > 0 and \
+                        not self.__shortPos.exitActive():
                     self.__shortPos.exitMarket()
                     self.info('short exited order on %s' % bars[self.__instrument].getDateTime())
             else:
@@ -92,7 +116,7 @@ class ArimaGarch(strategy.BacktestingStrategy):
                     self.short_exeinfo = True
 
                 elif signal > 0:
-                    self.info('long signal on %s' % bars[self.__instrument].getDateTime().strftime('%Y-%m-%d'))
+                    self.info('long signal on %s' % bars[self.__instrument].getDateTime())
                     self.__longPos = self.enterLong(self.__instrument, shares, True)
                     self.long_exeinfo = True
             ######################################################
@@ -127,21 +151,23 @@ class ArimaGarch(strategy.BacktestingStrategy):
             #         self.__shortPos = self.enterShort(self.__instrument, shares, False)
 
 
-def main(plot):
+def test_strat(plot):
+    instrument = 'FG0'
     # plot = True
-    instrument = "600281SH"
-    short_ma_Period = 10
-    medium_ma_period = 20
-    long_ma_period = 99
+    # instrument = "600281SH"
+    # short_ma_Period = 10
+    # medium_ma_period = 20
+    # long_ma_period = 99
 
     # Download the bars.
     # feed = yahoofinance.build_feed([instrument], 2011, 2012, ".")
-    csv_path = os.path.abspath('../histdata/minute') + '/' + instrument + '.csv'
-    feed = sf.Feed(frequency=bar.Frequency.MINUTE)
+    csv_path = os.path.abspath('../histdata/commodity') + '/' + instrument + '.csv'
+    # feed = sf.Feed(frequency=bar.Frequency.MINUTE)
+    feed = sf.Feed()
     feed.addBarsFromCSV(instrument, csv_path)
     # feed = csvfeed.Feed('Date', )
     strat = ArimaGarch(feed, instrument,
-                       window=500, arima_order=(5, 0, 5), garch_order=(1, 1))
+                       window=400, arima_order=(5, 0, 5), garch_order=(1, 1))
     sharpeRatioAnalyzer = sharpe.SharpeRatio()
     strat.attachAnalyzer(sharpeRatioAnalyzer)
     returnsAnalyzer = returns.Returns()
@@ -167,4 +193,4 @@ def main(plot):
 
 
 if __name__ == "__main__":
-    main(True)
+    test_strat(True)
