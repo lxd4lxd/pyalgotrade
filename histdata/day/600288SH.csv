@@ -1,4 +1,4 @@
-,amount,bought_amount,close,high,low,open,sold_amount,volume,datetime,instrument_id,exchange_id
+,amount,bought_amount,Close,High,Low,Open,sold_amount,Volume,Date,instrument_id,exchange_id
 0,572108102.0,320157621.5,11.16,11.37,10.6,10.76,251950480.5,51597044.0,2010-01-04,600288,SH
 1,549279336.0,287047250.5,11.27,11.64,10.86,11.06,262232085.5,48822966.0,2010-01-05,600288,SH
 2,461521697.0,215408736.0,11.01,11.48,11.0,11.21,246112961.0,41360139.0,2010-01-06,600288,SH

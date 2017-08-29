@@ -81,7 +81,7 @@ class ArimaGarch(strategy.BacktestingStrategy):
         # self.info(self.__highDS[-1])
         if len(self.__prices) > self.window:
 
-            window_prices = np.array(self.__prices[(-1-self.window):-1])
+            window_prices = np.array(self.__prices[(-1-self.window):])
             rt = np.diff(np.log(window_prices))
             predict = rob.r.fit_and_predict(rt,
                                            p=self.arima_order[0],
@@ -119,39 +119,11 @@ class ArimaGarch(strategy.BacktestingStrategy):
                     self.info('long signal on %s' % bars[self.__instrument].getDateTime())
                     self.__longPos = self.enterLong(self.__instrument, shares, True)
                     self.long_exeinfo = True
-            ######################################################
-            # if signal > 0:
-            #     if self.__shortPos is not None:
-            #         self.info(self.__shortPos.getSumitDateTime())
-            #         self.__shortPos.exitMarket()
-            #         self.info('short signal on: %s' % bars[self.__instrument].getDateTime().strftime('%Y-%m-%d'))
-            #         shares = int(self.getBroker().getCash() * 0.8 // bars[self.__instrument].getPrice())
-            #     else:
-            #         shares = int(self.getBroker().getCash() * 0.4 // bars[self.__instrument].getPrice())
-            #     if self.__longPos is None:
-            #         cash = self.getBroker().getCash()
-            #         self.info(cash)
-            #
-            #         self.info('long signal on: %s' % bars[self.__instrument].getDateTime().strftime('%Y-%m-%d'))
-            #         # Enter a buy market order. The order is good till canceled.
-            #         self.__longPos = self.enterLong(self.__instrument, shares, False)
-            # else:
-            #     if self.__longPos is not None:
-            #         self.info(self.__longPos.getSumitDateTime())
-            #         self.__longPos.exitMarket()
-            #         # self.info('long exit signal on: %s' % bars[self.__instrument].getDateTime().strftime('%Y-%m-%d'))
-            #         shares = int(self.getBroker().getCash() * 0.8 // bars[self.__instrument].getPrice())
-            #     else:
-            #         shares = int(self.getBroker().getCash() * 0.4 // bars[self.__instrument].getPrice())
-            #     if self.__shortPos is None:
-            #         cash = self.getBroker().getCash()
-            #         self.info(cash)
-            #         # shares = int(self.getBroker().getCash() * 0.4 / bars[self.__instrument].getPrice())
-            #         self.info('short signal on: %s' % bars[self.__instrument].getDateTime().strftime('%Y-%m-%d'))
-            #         self.__shortPos = self.enterShort(self.__instrument, shares, False)
+
 
 
 def test_strat(plot):
+    # instrument = '600288SH'
     instrument = 'FG0'
     # plot = True
     # instrument = "600281SH"
@@ -161,16 +133,18 @@ def test_strat(plot):
 
     # Download the bars.
     # feed = yahoofinance.build_feed([instrument], 2011, 2012, ".")
+    # csv_path = os.path.abspath('../histdata/day') + '/' + instrument + '.csv'
     csv_path = os.path.abspath('../histdata/commodity') + '/' + instrument + '.csv'
     # feed = sf.Feed(frequency=bar.Frequency.MINUTE)
     feed = sf.Feed()
     feed.addBarsFromCSV(instrument, csv_path)
     # feed = csvfeed.Feed('Date', )
     strat = ArimaGarch(feed, instrument,
-                       window=400, arima_order=(5, 0, 5), garch_order=(1, 1))
+                       window=500, arima_order=(5, 0, 5), garch_order=(1, 1))
     sharpeRatioAnalyzer = sharpe.SharpeRatio()
     strat.attachAnalyzer(sharpeRatioAnalyzer)
     returnsAnalyzer = returns.Returns()
+    strat.attachAnalyzer(returnsAnalyzer)
     ddAnalyzer = drawdown.DrawDown()
     strat.attachAnalyzer(ddAnalyzer)
 
@@ -187,6 +161,8 @@ def test_strat(plot):
 
     strat.run()
     print("Sharpe ratio: %.2f" % sharpeRatioAnalyzer.getSharpeRatio(0.05))
+    print("max dd : %.2f, duration: %s" % (ddAnalyzer.getMaxDrawDown(), ddAnalyzer.getLongestDrawDownDuration()))
+
     if plot:
         plt.plot()
     pass

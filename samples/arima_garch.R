@@ -7,10 +7,6 @@ library(rugarch)
 library(tseries)
 library(lattice)
 
-signal <- function (rt, window_length){
-  
-  forecast
-}
 
 best_arima <- function(x, max_p=5, max_i = 0, max_q=5){
   final.aic <- Inf
@@ -63,12 +59,12 @@ fit_and_predict <- function(x, p=1, i=0, q=1, garchOrder=c(1,1)){
                               error=function(e) FALSE,
                               warning=function(e) FALSE)
     if (is.logical(forecast_model)){
-      predict_value <- 1
+      predict_value <- sample(c(-1,1), 1)
     } else{
       predict_value <- forecast_model@forecast$seriesFor[1]
     }
   } else{
-    predict_value <- 1
+    predict_value <- sample(c(-1,1), 1)
   }
   return(predict_value)
 }

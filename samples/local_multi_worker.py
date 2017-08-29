@@ -26,11 +26,14 @@ from pyalgotrade.barfeed import sina_feed as sf
 import itertools
 import os
 from samples.statstical import ArimaGarch
+import logging
 
 
 def param_generator():
     instrument = ["FG0"]
-    window = range(250, 888)
+    # window = range(250, 888)
+    window = range(500, 888)
+    # window = [300, 400, 500, 600, 700, 800, 888]
     return itertools.product(instrument, window)
 
 
@@ -41,4 +44,5 @@ if __name__ == '__main__':
     # feed = sf.Feed(frequency=bar.Frequency.MINUTE)
     feed = sf.Feed()
     feed.addBarsFromCSV(instrument, csv_path)
+    a=param_generator()
     local.run(ArimaGarch, feed, param_generator())
