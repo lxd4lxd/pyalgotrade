@@ -533,7 +533,7 @@ class FutureBroker(broker.Broker):
     LOGGER_NAME = "broker.backtesting"
 
     def __init__(self, cash, barFeed, commission=FixedPerLot(20)):
-        super(Broker, self).__init__()
+        super(FutureBroker, self).__init__()
 
         assert(cash >= 0)
         self.__cash = cash
@@ -545,13 +545,17 @@ class FutureBroker(broker.Broker):
         self.__activeOrders = {}
         self.__useAdjustedValues = False
         self.__fillStrategy = fillstrategy.DefaultStrategy()
-        self.__logger = logger.getLogger(Broker.LOGGER_NAME)
+        self.__logger = logger.getLogger(FutureBroker.LOGGER_NAME)
 
         # It is VERY important that the broker subscribes to barfeed events before the strategy.
         barFeed.getNewValuesEvent().subscribe(self.onBars)
         self.__barFeed = barFeed
         self.__allowNegativeCash = False
         self.__nextOrderId = 1
+
+        # margin
+        self.margin_ratio = 0.2
+        self.trade_unit = 20
 
     def _getNextOrderId(self):
         ret = self.__nextOrderId
@@ -653,7 +657,7 @@ class FutureBroker(broker.Broker):
         if bars is not None:
             for instrument, shares in self.__shares.items():
                 instrumentPrice = self._getBar(bars, instrument).getClose(self.getUseAdjustedValues())
-                ret += instrumentPrice * shares
+                ret += instrumentPrice * self.trade_unit * shares
         return ret
 
     def getEquity(self):
@@ -662,17 +666,22 @@ class FutureBroker(broker.Broker):
 
     # Tries to commit an order execution.
     def commitOrderExecution(self, order, dateTime, fillInfo):
+        # futures broker just charge some margin
+        # margin = contract_value * ratio = price * trade_unit * ratio
         price = fillInfo.getPrice()
         quantity = fillInfo.getQuantity()
 
         if order.isBuy():
-            cost = price * quantity * -1
+            cost = price * self.trade_unit * self.margin_ratio * quantity * -1
             assert(cost < 0)
             sharesDelta = quantity
+
         elif order.isSell():
-            cost = price * quantity
+            cost = price * self.trade_unit * self.margin_ratio * quantity
             assert(cost > 0)
             sharesDelta = quantity * -1
+            realCash = self.getCash() - cost
+            assert(realCash > 0)
         else:  # Unknown action
             assert(False)
 
@@ -804,7 +813,7 @@ class FutureBroker(broker.Broker):
             self.__onBarsImpl(order, bars)
 
     def start(self):
-        super(Broker, self).start()
+        super(FutureBroker, self).start()
 
     def stop(self):
         pass

@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from pyalgotrade import bar
+from pyalgotrade.broker.backtesting import FutureBroker
 from pyalgotrade.stratanalyzer import returns
 from pyalgotrade.technical import ma
 from pyalgotrade.technical import cross
@@ -14,17 +15,18 @@ from pyalgotrade.barfeed import sina_feed as sf
 
 from pyalgotrade.stratanalyzer import sharpe, drawdown
 import numpy as np
-import rpy2.robjects as rob
-import rpy2.robjects.numpy2ri
+# import rpy2.robjects as rob
+# import rpy2.robjects.numpy2ri
 
-rpy2.robjects.numpy2ri.activate()
-rob.r.source('arima_garch.R')
+# rpy2.robjects.numpy2ri.activate()
+# rob.r.source('arima_garch.R')
+from statistical_strategy.py_garch import fit_and_predict
 
 
 class ArimaGarch(strategy.BacktestingStrategy):
     def __init__(self, feed, instrument, window=100, arima_order=(5, 0, 5),
                  garch_order=(1, 1)):
-        strategy.BacktestingStrategy.__init__(self, feed)
+        strategy.BacktestingStrategy.__init__(self, feed, FutureBroker(cash=1000000, barFeed=feed))
         self.__instrument = instrument
         # self.__longPos = None
         self.__longPos = None
@@ -83,11 +85,12 @@ class ArimaGarch(strategy.BacktestingStrategy):
 
             window_prices = np.array(self.__prices[(-1-self.window):])
             rt = np.diff(np.log(window_prices))
-            predict = rob.r.fit_and_predict(rt,
-                                           p=self.arima_order[0],
-                                           i=self.arima_order[1],
-                                           q=self.arima_order[2])
-            signal = predict[0]
+            signal = fit_and_predict(rt)
+            # predict = rob.r.fit_and_predict(rt,
+            #                                p=self.arima_order[0],
+            #                                i=self.arima_order[1],
+            #                                q=self.arima_order[2])
+            # signal = predict[0]
             self.info(signal)
             self.info(self.getBroker().getEquity())
             if self.__longPos is not None:
@@ -109,7 +112,7 @@ class ArimaGarch(strategy.BacktestingStrategy):
             else:
                 cash = self.getBroker().getCash()
                 self.info(cash)
-                shares = int(cash * 0.8 / bars[self.__instrument].getPrice())
+                shares = int(cash * 0.5 / (bars[self.__instrument].getPrice() * self.getBroker().trade_unit * self.getBroker().margin_ratio))
                 if signal < 0:
                     self.info('short signal on %s' % bars[self.__instrument].getDateTime())
                     self.__shortPos = self.enterShort(self.__instrument, shares, True)

@@ -22,12 +22,12 @@ _______________________________________________________________________________
 #
 import os
 
-import rpy2.robjects as rob
-import rpy2.robjects.numpy2ri
-rpy2.robjects.numpy2ri.activate()
+# import rpy2.robjects as rob
+# import rpy2.robjects.numpy2ri
+# rpy2.robjects.numpy2ri.activate()
 import numpy as np
 import pandas as pd
-rob.r.source('arima_garch.R')
+# rob.r.source('arima_garch.R')
 
 def trade_signal(x):
     sig = rob.r.fit_and_predict(x, p=5, i=0, q=5)
